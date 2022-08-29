@@ -1,0 +1,7 @@
+{
+    "files.associations": {
+        "bashrc": "shellscript",
+        "shared_mutex": "cpp",
+        "condition_variable": "cpp"
+    }
+}

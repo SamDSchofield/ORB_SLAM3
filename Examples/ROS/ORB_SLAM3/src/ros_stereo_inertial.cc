@@ -24,6 +24,7 @@
 #include<queue>
 #include<thread>
 #include<mutex>
+#include <signal.h>
 
 #include<ros/ros.h>
 #include<cv_bridge/cv_bridge.h>
@@ -44,6 +45,9 @@ public:
 
     queue<sensor_msgs::ImuConstPtr> imuBuf;
     std::mutex mBufMutex;
+    int count_since_image = 0;
+    bool started = false;
+    bool run = true;
 };
 
 class ImageGrabber
@@ -75,6 +79,8 @@ int main(int argc, char **argv)
 {
   ros::init(argc, argv, "Stereo_Inertial");
   ros::NodeHandle n("~");
+  signal(SIGINT, mySigIntHandler);
+
   ros::console::set_logger_level(ROSCONSOLE_DEFAULT_NAME, ros::console::levels::Info);
   bool bEqual = false;
   if(argc < 4 || argc > 5)
@@ -144,7 +150,17 @@ int main(int argc, char **argv)
 
   std::thread sync_thread(&ImageGrabber::SyncWithImu,&igb);
 
-  ros::spin();
+  // ros::spin();
+    ros::Rate loop_rate(20);
+
+  while (ros::ok() && run) {
+    if (started && count_since_image > 60) {
+      run = false;
+    }
+    count_since_image++;
+    ros::spinOnce();
+    loop_rate.sleep();
+  }
 
   SLAM.Shutdown();
   SLAM.SaveTrajectoryEuRoC("/Datasets/trajectory.txt");
@@ -165,6 +181,8 @@ void ImageGrabber::GrabImageLeft(const sensor_msgs::ImageConstPtr &img_msg)
 
 void ImageGrabber::GrabImageRight(const sensor_msgs::ImageConstPtr &img_msg)
 {
+  if (!started) started = true;
+  count_since_image = 0;
   mBufMutexRight.lock();
   if (!imgRightBuf.empty())
     imgRightBuf.pop();
