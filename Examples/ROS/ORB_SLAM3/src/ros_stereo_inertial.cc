@@ -146,6 +146,9 @@ int main(int argc, char **argv)
 
   ros::spin();
 
+  SLAM.Shutdown();
+  SLAM.SaveTrajectoryEuRoC("/Datasets/trajectory.txt");
+
   return 0;
 }
 
